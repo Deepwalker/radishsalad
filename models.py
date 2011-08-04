@@ -13,7 +13,8 @@ class DataType(datatypes.RedisDataType):
         return new_inst
 
     def get_key(self, instance=None):
-        return self._key + str((instance or self.instance).id)
+        inst = instance or self.instance
+        return '%s:%s:%s' % (inst.prefix, inst.id, self._key)
 
 
 class String(DataType):
@@ -40,10 +41,16 @@ class Set(DataType, datatypes.Set):
 # Base for models
 
 class ModelMetaclass(type):
+    prefixes = []
     def __new__(cls, name, bases, attrs):
         for key, attr in attrs.iteritems():
             if isinstance(attr, DataType):
                 attr.set_key(key)
+        if not 'prefix' in attrs:
+            attrs['prefix'] = name.lower()
+        if attrs['prefix'] in ModelMetaclass.prefixes:
+            raise Exception('Duplication of prfixies')
+        ModelMetaclass.prefixes.append(attrs['prefix'])
         return type.__new__(cls, name,bases, attrs)
 
 
