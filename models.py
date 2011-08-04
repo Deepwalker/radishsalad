@@ -12,12 +12,13 @@ class DataType(datatypes.RedisDataType):
         new_inst.instance = instance
         return new_inst
 
-    def get_key(self):
-        return self._key + str(self.instance.id)
+    def get_key(self, instance=None):
+        return self._key + str((instance or self.instance).id)
 
 
 class String(DataType):
     def __get__(self, instance, owner):
+
         return get_redis().get(self.get_key(instance))
 
     def __set__(self, instance, value):
@@ -52,14 +53,3 @@ class Model(object):
     def __init__(self, id):
         # TODO new object creation by id generation
         self.id = id
-
-
-# models
-
-class User(Model):
-    name = String()
-    uid = String()
-    subscribers = Set()
-    profile = Hash()
-    messages = List()
-    read = List()

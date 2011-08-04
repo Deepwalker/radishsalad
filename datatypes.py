@@ -56,9 +56,6 @@ class List(RedisDataType):
     def __len__(self):
         return self.r_call('llen')
 
-    def __iter__(self):
-        return self
-
     def append(self, value):
         return self.r_call('rpush', value)
 
