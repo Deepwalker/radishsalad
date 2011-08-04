@@ -6,6 +6,7 @@ from . import datatypes
 # Redis datatypes
 
 class DataType(datatypes.RedisDataType):
+
     def __get__(self, instance, owner):
         new_inst = self.__class__()
         new_inst._key = self._key
@@ -18,6 +19,7 @@ class DataType(datatypes.RedisDataType):
 
 
 class String(DataType):
+
     def __get__(self, instance, owner):
 
         return get_redis().get(self.get_key(instance))
@@ -38,10 +40,17 @@ class Set(DataType, datatypes.Set):
     pass
 
 
+class AutoIncrementId(object):
+
+    def __get__(self, instance, owner):
+        return  datatypes.Counter('counter:' + owner.prefix)
+
+
 # Base for models
 
 class ModelMetaclass(type):
     prefixes = []
+
     def __new__(cls, name, bases, attrs):
         for key, attr in attrs.iteritems():
             if isinstance(attr, DataType):
@@ -49,7 +58,7 @@ class ModelMetaclass(type):
         if not 'prefix' in attrs:
             attrs['prefix'] = name.lower()
         if attrs['prefix'] in ModelMetaclass.prefixes:
-            raise Exception('Duplication of prfixies')
+            raise Exception('Duplication of prefixies')
         ModelMetaclass.prefixes.append(attrs['prefix'])
         return type.__new__(cls, name,bases, attrs)
 

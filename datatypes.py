@@ -6,6 +6,11 @@ from .connection import get_redis
 
 
 class RedisDataType(object):
+
+    def __init__(self, key=None):
+        if key:
+            self.set_key(key)
+
     def get_key(self):
         return self._key
 
@@ -15,8 +20,17 @@ class RedisDataType(object):
     def r_call(self, redis_command, *args):
         return getattr(get_redis(), redis_command)(self.get_key(), *args)
 
+    def clear(self):
+        self.r_call('delete')
+
+
+class Counter(RedisDataType):
+    def next(self):
+        return self.r_call('incr')
+
 
 class Hash(RedisDataType, DictMixin):
+
     def __getitem__(self, key):
         return self.r_call('hget', key)
 
@@ -34,6 +48,7 @@ class Hash(RedisDataType, DictMixin):
 
 
 class List(RedisDataType):
+
     def __getitem__(self, key_or_slice):
         if isinstance(key_or_slice, slice):
             data = self.r_call('lrange', key_or_slice.start or 0,
@@ -68,4 +83,22 @@ class List(RedisDataType):
 
 
 class Set(RedisDataType):
-    pass
+
+    def __iter__(self):
+        return iter(self.get_set())
+
+    def __len__(self):
+        return self.r_call('scard')
+
+    def __contains__(self, value):
+        return self.r_call('sismember', value)
+
+    def get_set(self):
+        return self.r_call('smembers')
+
+    def add(self, value):
+        self.r_call('sadd', value)
+
+    def remove(self, value):
+        if not self.r_call('remove', value):
+            raise KeyError()
