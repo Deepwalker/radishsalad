@@ -1,4 +1,4 @@
-from rmodels import models as m
+from . import models as m
 
 # models
 
