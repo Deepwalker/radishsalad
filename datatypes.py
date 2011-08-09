@@ -29,6 +29,14 @@ class Counter(RedisDataType):
         return self.r_call('incr')
 
 
+class String(RedisDataType):
+    def __str__(self):
+        return self.r_call('get')
+
+    def set(self, value):
+        return self.r_call('set', value)
+
+
 class Hash(RedisDataType, DictMixin):
 
     def __getitem__(self, key):
@@ -96,8 +104,8 @@ class Set(RedisDataType):
     def get_set(self):
         return self.r_call('smembers')
 
-    def add(self, value):
-        self.r_call('sadd', value)
+    def add(self, *values):
+        self.r_call('sadd', *values)
 
     def remove(self, value):
         if not self.r_call('remove', value):

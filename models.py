@@ -8,7 +8,8 @@ from . import datatypes
 class DataType(datatypes.RedisDataType):
 
     def __get__(self, instance, owner):
-        new_inst = self.__class__()
+        new_inst = type(self)(*getattr(self, 'args', []),
+                              **getattr(self, 'kwargs', {}))
         new_inst._key = self._key
         new_inst.instance = instance
         return new_inst
@@ -18,11 +19,7 @@ class DataType(datatypes.RedisDataType):
         return '%s:%s:%s' % (inst.prefix, inst.id, self._key)
 
 
-class String(DataType):
-
-    def __get__(self, instance, owner):
-
-        return get_redis().get(self.get_key(instance))
+class String(DataType, datatypes.String):
 
     def __set__(self, instance, value):
         get_redis().set(self.get_key(instance), value)
@@ -46,6 +43,15 @@ class AutoIncrementId(object):
         return  datatypes.Counter('counter:' + owner.prefix)
 
 
+class Pointer(String):
+    def __init__(self, foreign_class):
+        self.foreign_class = foreign_class
+        self.args = [foreign_class]
+
+    def __get__(self, instance, owner):
+        return self.foreign_class(super(Pointer, self).__get__(instance, owner))
+
+
 # Base for models
 
 class ModelMetaclass(type):
@@ -66,6 +72,12 @@ class ModelMetaclass(type):
 class Model(object):
     __metaclass__ = ModelMetaclass
 
-    def __init__(self, id):
-        # TODO new object creation by id generation
-        self.id = id
+    id_generator = AutoIncrementId()
+
+    def __init__(self, oid=None, new=False):
+        if new and not oid:
+            self.id = str(self.id_generator.next())
+        elif oid:
+            self.id = oid
+        else:
+            raise ValueError('Do you want create object or what?')
