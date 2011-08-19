@@ -49,7 +49,8 @@ class Pointer(String):
         self.args = [foreign_class]
 
     def __get__(self, instance, owner):
-        return self.foreign_class(super(Pointer, self).__get__(instance, owner))
+        return self.foreign_class(
+                str(super(Pointer, self).__get__(instance, owner)))
 
 
 # Base for models
@@ -81,3 +82,7 @@ class Model(object):
             self.id = oid
         else:
             raise ValueError('Do you want create object or what?')
+
+    @classmethod
+    def from_seq(cls, seq):
+        return [cls(id) for id in seq]

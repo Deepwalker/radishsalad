@@ -31,7 +31,7 @@ class Counter(RedisDataType):
 
 class String(RedisDataType):
     def __str__(self):
-        return self.r_call('get')
+        return self.r_call('get') or ''
 
     def set(self, value):
         return self.r_call('set', value)
