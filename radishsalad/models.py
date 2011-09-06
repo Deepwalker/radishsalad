@@ -76,9 +76,9 @@ class Model(object):
     id_generator = AutoIncrementId()
 
     def __init__(self, oid=None, new=False):
-        if new and not oid:
+        if new and oid is None:
             self.id = str(self.id_generator.next())
-        elif oid:
+        elif oid is not None:
             self.id = oid
         else:
             raise ValueError('Do you want create object or what?')

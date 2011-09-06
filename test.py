@@ -1,4 +1,5 @@
-from . import models as m
+from radishsalad import datatypes as dt
+from radishsalad import models as m
 
 # models
 
@@ -10,10 +11,13 @@ class User(m.Model):
     read = m.List()
 
 if __name__ == '__main__':
+    # Base datatypes demo
+
+    # Models demo
     u = User('1234')
 
     u.name = 'Donald'
-    assert u.name == 'Donald'
+    assert str(u.name) == 'Donald'
 
     u.profile['born_at'] = 'London'
     assert dict(u.profile) == {'born_at': 'London'}
@@ -26,4 +30,4 @@ if __name__ == '__main__':
     u.subscribers.add('roberto')
     u.subscribers.add('paulo')
     assert 'roberto' in u.subscribers
-    assert {'roberto', 'paulo'} == u.subscribers.get_set()
+    assert set(['roberto', 'paulo']) == u.subscribers.get_set()
