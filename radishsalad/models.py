@@ -1,7 +1,10 @@
-#! /user/bin/env python
+#! /usr/bin/env python
 
+from itertools import izip
 from .connection import get_redis
 from . import datatypes
+from .errors import RadishSaladError
+from .utils import StringMixin, ichain
 
 # Redis datatypes
 
@@ -11,17 +14,26 @@ class DataType(datatypes.RedisDataType):
         new_inst = type(self)(*getattr(self, 'args', []),
                               **getattr(self, 'kwargs', {}))
         new_inst._key = self._key
-        new_inst.instance = instance
+        new_inst.instance = instance or owner
+        new_inst._value = getattr(new_inst.instance, 'cache', {}).get(self._key)
         return new_inst
 
-    def get_key(self, instance=None):
+    def get_key(self, instance=None, custom_id=None):
         inst = instance or self.instance
-        return '%s:%s:%s' % (inst.prefix, inst.id, self._key)
+        oid = getattr(inst, 'id', custom_id)
+        if oid is None:
+            raise RadishSaladError(
+                    'You need call this method with instance or id')
+        return '%s:%s:%s' % (inst.prefix, oid, self._key)
+
+    def gen_keys(self, seq):
+        return [self.get_key(custom_id=custom_id) for custom_id in seq]
 
 
-class String(DataType, datatypes.String):
+class String(DataType, StringMixin, datatypes.String):
 
     def __set__(self, instance, value):
+        self._value = value
         get_redis().set(self.get_key(instance), value)
 
 
@@ -59,13 +71,20 @@ class ModelMetaclass(type):
     prefixes = []
 
     def __new__(cls, name, bases, attrs):
+        strings = []
         for key, attr in attrs.iteritems():
             if isinstance(attr, DataType):
                 attr.set_key(key)
+            # Keep strings for MGET
+            if isinstance(attr, String):
+                strings.append(key)
         if not 'prefix' in attrs:
             attrs['prefix'] = name.lower()
         if attrs['prefix'] in ModelMetaclass.prefixes:
             raise Exception('Duplication of prefixies')
+        # Developer can put his own prefetching list
+        if 'strings' not in attrs:
+            attrs['strings'] = strings
         ModelMetaclass.prefixes.append(attrs['prefix'])
         return type.__new__(cls, name,bases, attrs)
 
@@ -75,14 +94,25 @@ class Model(object):
 
     id_generator = AutoIncrementId()
 
-    def __init__(self, oid=None, new=False):
+    def __init__(self, oid=None, new=False, cache=None):
         if new and oid is None:
             self.id = str(self.id_generator.next())
         elif oid is not None:
             self.id = oid
         else:
             raise ValueError('Do you want create object or what?')
+        self.cache = dict(zip(self.strings, (v or '' for v in cache))) if cache else {}
+
+    @classmethod
+    def get_strings(cls):
+        return [getattr(cls, s) for s in cls.strings]
 
     @classmethod
     def from_seq(cls, seq):
-        return [cls(id) for id in seq]
+        seq = list(seq)
+        redis = get_redis()
+        strs = cls.get_strings()
+        prefetch_keys = list(ichain(izip(*[s.gen_keys(seq) for s in strs])))
+        data = redis.mget(prefetch_keys)
+        nstr = len(cls.strings)
+        return [cls(id, cache=[data.pop(0) for i in xrange(nstr)]) for id in seq]

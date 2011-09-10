@@ -66,3 +66,24 @@ Library does not return you a string instead of `String` objects for using in re
     ['0', '1', '2', '3', '4', '5', '6', '7', ... '38', '39']
 
 
+Prefetch
+========
+
+Models have special class method for create instances with prefetched String fields
+over redis MGET method.
+
+So, example:
+
+    >>> User.from_seq(xrange(40))
+    [<__main__.User object at 0x7f745bc72d90>, ...]
+    >>> [str(u.name) for u in users]
+    ['0', '1', '2', '3', '4', ...]
+
+All `name` attributes fetched with one `mget` call. Most interesting that if we
+have more then one `String` attribute, `from_seq` will fetch it all for all ids with
+one `mget`.
+
+All data we keep in instance `cache` attribute:
+
+    >>> [u.cache for u in users]
+    [{'name': '0'}, {'name': '1'}, {'name': '2'},

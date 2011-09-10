@@ -1,4 +1,4 @@
-#! /user/bin/env python
+#! /usr/bin/env python
 
 from UserDict import DictMixin
 from redis.exceptions import ResponseError
