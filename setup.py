@@ -23,7 +23,7 @@ setupconf = dict(
 
     install_requires = ['redis'],
     test_loader = 'attest:Loader',
-    test_suite = 'test.py',
+    test_suite = 'test.base',
 
     classifiers = [
         'Intended Audience :: Developers',

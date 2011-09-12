@@ -15,6 +15,7 @@ class DataType(datatypes.RedisDataType):
                               **getattr(self, 'kwargs', {}))
         new_inst._key = self._key
         new_inst.instance = instance or owner
+        new_inst.owner = owner
         new_inst._value = getattr(new_inst.instance, 'cache', {}).get(self._key)
         return new_inst
 
@@ -63,6 +64,22 @@ class Pointer(String):
     def __get__(self, instance, owner):
         return self.foreign_class(
                 str(super(Pointer, self).__get__(instance, owner)))
+
+
+class Index(String):
+    def __init__(self, index_name):
+        self.index_name = index_name
+        self.args = [index_name]
+
+    def get_for(self, search_str):
+        "Return `owner` class for given string"
+        return self.owner(get_redis().get('%s:%s:%s' % (self.index_name,
+                            self.owner.prefix, search_str)))
+
+    def __set__(self, instance, value):
+        super(Index, self).__set__(instance, value)
+        get_redis().set('%s:%s:%s' % (self.index_name, instance.prefix, value),
+                        instance.id)
 
 
 # Base for models
