@@ -42,6 +42,7 @@ So you create an model:
     >>> from radishsalad import models as m
     >>> class User(m.Model):
     ...      name = m.String()
+    ...      name2 = m.Index('un')
     ...      subscribers = m.Set()
     ...      profile = m.Hash()
     ...      messages = m.List()
@@ -57,7 +58,11 @@ Now you have `user` instance, and you can get keys for it members:
     >>> user.name.get_key()
     'user:1000:name'
 
-Library does not return you a string instead of `String` objects for using in redis.mget:
+String
+------
+
+Library does not return you a string instance instead of `String` objects, due `String` has `get_key` method,
+that can be usefull in pair with redis.mget:
 
     >>> from radishsalad.connection import get_redis
     >>> r = get_redis()
@@ -65,6 +70,23 @@ Library does not return you a string instead of `String` objects for using in re
     >>> r.mget(User(i).name.get_key() for i in xrange(40))
     ['0', '1', '2', '3', '4', '5', '6', '7', ... '38', '39']
 
+Index
+-----
+
+In addition we have handy `Index` field. Everytime when save it, you have index record created.
+Example:
+
+    >>> u = User(1000)
+    >>> u.name2 = 'ronaldinio'
+
+When we save 'ronaldinio' in name2, additional values saved with key 'un:user:ronaldinio' and value '1000'.
+
+    >>> User.name2.get_for('ronaldinio')
+    <__main__.User object at 0x7f56b40dc190>
+    >>> User.name2.get_for('ronaldinio').id
+    '1000'
+
+Call `get_for` method of index attribute return object for given string.
 
 Prefetch
 ========
